@@ -44,7 +44,7 @@ For example:
 $ python generate.py new_database.db --wise wise/wise_hii_V3.0_hrds.csv --wiseonly
 ```
 
-To add the parallax data from Reid et al. (2019) to the (existing) database, use `add_parallax.py`:
+To add the parallax data from [Reid et al. (2019)](https://ui.adsabs.harvard.edu/abs/2019ApJ...885..131R/abstract) to the (existing) database, use `add_parallax.py`:
 ```bash
 $ python add_parallax.py --help
 usage: add_parallax.py [-h] [--data DATA] [--refs REFS] db
@@ -64,7 +64,7 @@ For example:
 $ python add_parallax.py new_database.db --data data/reid_2019/reid2019_merge.txt --refs data/reid_2019/reid2019_refs.txt
 ```
 
-To add Wenger et al. (2018) Monte Carlo kinematic distances to the (existing) database, use `add_distances.py`:
+To add [Wenger et al. (2018)](https://ui.adsabs.harvard.edu/abs/2018ApJ...856...52W/abstract) Monte Carlo kinematic distances to the (existing) database, use `add_distances.py`:
 ```bash
 $ python add_distances.py --help
 usage: add_distances.py [-h] [-n NUM_SAMPLES] [-r ROTCURVE] [-t TABLENAME] db
