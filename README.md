@@ -26,9 +26,7 @@ not include any ancillary radio recombination line data). This is accomplished v
 `generate.py` with the `--wiseonly` flag.
 
 ```bash
-python generate.py --help
-```
-```
+$ python generate.py --help
 usage: generate.py [-h] [--wise WISE] [--wiseonly] db
 
 HII Region Database Generator
@@ -41,15 +39,14 @@ optional arguments:
   --wise WISE  WISE Catalog CSV filename (default: wise/wise_hii_V3.0_hrds.csv)
   --wiseonly   Generate database with WISE Catalog only (default: False)
 ```
+For example:
 ```bash
-python generate.py new_database.db --wise wise/wise_hii_V3.0_hrds.csv --wiseonly
+$ python generate.py new_database.db --wise wise/wise_hii_V3.0_hrds.csv --wiseonly
 ```
 
 To add the parallax data from Reid et al. (2019) to the (existing) database, use `add_parallax.py`:
 ```bash
-python add_parallax.py --help
-```
-```
+$ python add_parallax.py --help
 usage: add_parallax.py [-h] [--data DATA] [--refs REFS] db
 
 HII Region Database Parallax Table Generator
@@ -62,15 +59,14 @@ optional arguments:
   --data DATA  The parallax data filename (default: data/reid_2019/reid2019_merge.txt)
   --refs REFS  The parallax data references filename (default: data/reid_2019/reid2019_refs.txt)
 ```
+For example:
 ```bash
-python add_parallax.py new_database.db --data data/reid_2019/reid2019_merge.txt --refs data/reid_2019/reid2019_refs.txt
+$ python add_parallax.py new_database.db --data data/reid_2019/reid2019_merge.txt --refs data/reid_2019/reid2019_refs.txt
 ```
 
 To add Wenger et al. (2018) Monte Carlo kinematic distances to the (existing) database, use `add_distances.py`:
 ```bash
-python add_distances.py --help
-```
-```
+$ python add_distances.py --help
 usage: add_distances.py [-h] [-n NUM_SAMPLES] [-r ROTCURVE] [-t TABLENAME] db
 
 HII Region Database Distances Table Generator
@@ -87,8 +83,9 @@ optional arguments:
   -t TABLENAME, --tablename TABLENAME
                         Table name (default: Distances_Reid2019)
 ```
+For example:
 ```bash
-python add_distances.py new_database.db -n 5000 -r reid19_rotcurve -t Distances_Reid2019
+$ python add_distances.py new_database.db -n 5000 -r reid19_rotcurve -t Distances_Reid2019
 ```
 
 ## Issues and Contributing
