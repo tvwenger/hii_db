@@ -1,0 +1,266 @@
+This database contains all of our radio recombination data about
+HII regions in the WISE Catalog of Galactic HII Regions.
+
+=========
+Changelog
+=========
+hii_v1_20200402.db
+- Generated using WISE Catalog wise_hii_V2.1_hrds_v3.csv
+- Added detections from the following sources:
+  o WISE Catalog
+  o Balser et al. (2015) GBT and 140 Foot
+  o Brown et al. (2017) SHRDS Pilot
+  o Wenger et al. (2019) SHRDS Bright Catalog
+  o Wenger et al. (2019) VLA
+  o Wenger et al. (2021) SHRDS Full Catalog
+- Generated kinematic distances for 2220 WISE Catalog sources using
+  median VLSR and e_VLSR for all detections associated with that
+  source.
+- Added parallax data from Reid et al. (2019)
+
+hii_v1_20200713.db
+- Added Distances_Reid2014, using Reid+2014 rotation curve and
+  2500 Monte Carlo samples each
+- Added Distances_Reid2019, using Reid+2019 rotation curve and
+  2500 Monte Carlo samples each
+- Added distance_kde column to distance tables, which is the KDE
+  for the combined near and far distance samples.
+
+hii_v1_20200728.db
+- Added Wenger+2021 SHRDS mosaic data, and recomputed distances
+- Added Fields and FieldsDetections tables
+
+hii_v2_20201122.db
+- Generated using WISE Catalog wise_hii_V2.3_hrds.csv
+
+hii_v2_20201203.db
+- Updated those WISE Catalog sources with SHRDS continuum detections
+  from radio quiet (Q) to candidate (C).
+
+hii_v3_20210930.db
+- Generated using WISE Catalog wise_hii_V3.0_hrds.csv
+- Version hii_v3_20210930_wise.db contains only WISE Catalog data
+
+=======
+Catalog
+=======
+All of the relevant data from the WISE Catalog.
+
+id          :: unique identifier
+gname       :: the name of the source in the WISE Catalog
+alias       :: other names for the source
+hii_name    :: other names for the source
+catalog     :: K = "known", G = "group", C = "candidate", Q = "radio quiet candidate"
+ra          :: J2000 RA (deg)
+dec         :: J2000 Declination (deg)
+glong       :: Galactic longitude (deg)
+glat        :: Galactic latitude (deg)
+radius      :: IR radius (arcsec)
+kdar        :: KDAR. N = "near", F = "far", T = "tangent"
+dist_method :: distance method (i.e., KDAR technique)
+dist_author :: author of the distance determination
+
+======
+Groups
+======
+The HII region group information from the WISE Catalog.
+
+id           :: unique identifier
+name         :: group name
+vlsr, e_vlsr :: group IAU-LSR velocity and uncertainty (km/s)
+                N.B. Where multiple velocities are assigned, different
+	        components are separated by semi-colon ";"
+kdar         :: group KDAR. N = "near", F = "far", T = "tangent"
+
+=============
+CatalogGroups
+=============
+Relationship between Catalog and Groups tables. Multiple Catalog
+sources can belong to the same Group.
+
+catalog_id :: identifier in Catalog
+group_id   :: identifier in Group
+
+======
+Fields (excluded in version *_wise.db)
+======
+The observed fields (SHRDS Full Catalog only).
+
+id    :: unique identifier
+name  :: field name
+ra    :: center J2000 RA (deg)
+dec   :: center J2000 Declination (deg)
+glong :: center Galactic longitude (deg)
+glat  :: center Galactic latitude (deg)
+hpbw  :: field approximate half-power beam-width (HPBW; arcsec).
+         NULL for mosaic fields.
+
+==========
+Detections
+==========
+All of the optical and RRL detections from the following sources:
+  o WISE Catalog
+The following are excluded from in version *_wise.db
+  o Balser et al. (2015) GBT and 140 Foot
+  o Brown et al. (2017) SHRDS Pilot
+  o Wenger et al. (2019) SHRDS Bright Catalog
+  o Wenger et al. (2019) VLA
+  o Wenger et al. (2021) SHRDS Full Catalog
+
+id           :: unique identifier
+name         :: detection name (usually the WISE Catalog name)
+ra           :: J2000 RA of observation (deg)
+dec          :: J2000 declination of observation (deg)
+glong        :: Galactic longitude of observation (deg)
+glat         :: Galactic latitude of observation (deg)
+line_freq    :: spectral line frequency (MHz)
+component    :: for spectra with multiple lines, (a, b, ...) are the different components.
+line, e_line :: spectral line brightness and uncertainty
+line_unit    :: units of the spectral line brightness
+vlsr, e_vlsr :: IAU-LSR velocity (km/s)
+fwhm, e_fwhm :: FWHM line width (km/s)
+spec_rms     :: spectral RMS (line_unit units)
+line_qf      :: line detection quality factor (1=A, 2=B, ...)
+line_snr     :: line detection signal-to-noise ratio
+cont_freq    :: continuum frequency (MHz)
+cont, e_cont :: continuum brightness and uncertainty
+cont_unit    :: units of the continuum brightness
+area, e_area :: angular area subtended by the source and uncertainty
+area_unit    :: units of area, e_area
+cont_qf      :: continuum detection quality factor (1=A, 2=B, ...)
+linetocont,
+e_linetocont :: line-to-continuum ratio and uncertainty
+te, e_te     :: electron temperature and uncertainty (K)
+lines        :: transitions observed
+beam_area    :: observing beam area (square arcsec)
+telescope    :: telescope where data were acquired
+author       :: author of detection
+source       :: from where the data were imported
+type         :: "peak" = peak brightness, "total" = total flux
+taper        :: "notaper" = not tapered; "notapsm" = not tapered, smoothed;
+                "uvtaper" = tapered; "uvtapsm" tapered and smoothed.
+
+=================
+CatalogDetections 
+=================
+Relationship betweeen Catalog and Detections tables. Multiple Detections
+can be associated with the same Catalog source.
+
+catalog_id   :: identifier in Catalog
+detection_id :: identifier in Detections
+separation   :: angular separation between detection observed position
+	        and catalog source position (arcsec)
+
+================
+FieldsDetections (excluded in version *_wise.db)
+================
+Relationship between Fields and Detections tables. Multiple Detections
+can belong to the same Field.
+
+field_id :: identifier in Fields
+detection_id   :: identifier in Detections
+
+==================
+Distances_Reid2019
+==================
+Kinematic distances generated using the Wenger+2018 Monte Carlo
+method and the Reid+2019 Galactic rotation model. Distances are
+derived for all WISE Catalog sources with associated single-component
+spectra, using the WISE Catalog position and the median VLSR and
+e_VLSR of all detections associated with that source.
+
+catalog_id :: identifier in Catalog
+Rgal, Rtan, near, far, tangent, vlsr_tangent
+           :: the modes (most likely values) for the Galactocentric
+	      radius, Galactocentric radius of the tangent point,
+	      near distance, far distance, tangent point distance,
+	      and LSR velocity of the tangent point.
+_err_neg, _err_pos
+           :: the boundaries of the 68.3% highest posterior density
+	      Bayesian credible interval (i.e., the uncertainty)
+_kde       :: A kernel density estimator fit to the posteriors
+distance_kde :: the kernel density estimator for the full kinematic
+	        distance probability density (i.e. without breaking
+		the near/far degeneracy). For objects near the
+		tangent point, this KDE defines the real kinematic
+		distance uncertainty.
+
+========
+Parallax
+========
+The maser parallax data from Reid et al. (2019), including the soruces
+he gave via private communication.
+
+id           :: unique identifier
+gname        :: source name
+alias        :: other name
+ra           :: J2000 RA (deg)
+dec          :: J2000 declination (deg)
+glong        :: Galactic longitude (deg)
+glat         :: Galactic latitude (deg)
+plx, e_plx   :: parallax and uncertainty (mas)
+mux, e_mux   :: RA*cos(dec) proper motion (mas/yr)
+muy, e_muy   :: declination proper motion (mas/yr)
+vlsr, e_vlsr :: IAU-LSR velocity and uncertainty (km/s)
+author       :: maser parallax authors
+
+===============
+CatalogParallax
+===============
+Relationship between Parallax sources and WISE Catalog.
+
+catalog_id  :: identifier in Catalog
+parallax_id :: identifier in Parallax
+separation  :: angular separation between parallax position
+	       and catalog source position (arcsec)
+
+========
+Examples
+========
+TVW recommends using a software called "sqlitebrowser" to interact
+with the database. You can execute SQL queries and save the output
+to formatted text files. Or you can directly interact with the
+database via the python package "sqlite3".
+
+Example 1. Get the names and positions of all "known" Catalog sources
+
+SELECT gname, glong, glat FROM Catalog WHERE catalog = "K"
+
+>>> Result: 2376 rows returned in 40ms
+
+Example 2. Get the position and LSR velocities of all Catalog sources
+  with an associated detection. We pick only the detection with the
+  smallest fractional uncertainty in the line brightness.
+
+SELECT cat.gname, cat.glong, cat.glat, det.vlsr, det.e_vlsr
+  FROM Catalog cat
+  INNER JOIN CatalogDetections catdet ON catdet.catalog_id = cat.id
+  INNER JOIN Detections det ON catdet.detection_id = det.id
+  WHERE det.vlsr IS NOT NULL
+  GROUP BY cat.gname HAVING MIN(det.e_line/det.line)
+
+>>>Result: 2240 rows returned in 207ms
+
+Example 3. Same as example 2, but also get the kinematic distances if
+  available.
+
+SELECT cat.gname, cat.glong, cat.glat, det.vlsr, det.e_vlsr, dist.near, dist.far, dist.tangent
+  FROM Catalog cat
+  INNER JOIN CatalogDetections catdet ON catdet.catalog_id = cat.id
+  INNER JOIN Detections det ON catdet.detection_id = det.id
+  LEFT JOIN Distances_Reid2019 dist ON dist.catalog_id = cat.id
+  WHERE det.vlsr IS NOT NULL
+  GROUP BY cat.gname HAVING MIN(det.e_line/det.line)
+
+>>>Result: 2240 rows returned in 392ms
+
+Example 4. Get all WISE Catalog sources with both a kinematic and
+  a parallax distance.
+
+SELECT cat.gname, dist.near, dist.far, dist.tangent, par.plx
+  FROM Catalog cat
+  INNER JOIN Distances_Reid2019 dist ON dist.catalog_id = cat.id
+  INNER JOIN CatalogParallax catpar ON catpar.catalog_id = cat.id
+  INNER JOIN Parallax par ON catpar.parallax_id = par.id
+
+>>> Result: 137 rows returned in 118ms
