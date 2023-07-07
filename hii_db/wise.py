@@ -309,23 +309,11 @@ def add_detections(db, wisefile):
         if "alpha" in w["Lines"]:
             line_unit = "optical"
             cont_unit = "optical"
+            line_freq = 456700000.0
         else:
             line_unit = "mK"
             cont_unit = "mK"
-        if line_unit == "optical":
-            line_freq = 456700000.0
-        elif w["Wavelength"] == 3:
-            line_freq = 10000.0
-        elif w["Wavelength"] == 5:
-            line_freq = 6000.0
-        elif w["Wavelength"] == 6:
-            line_freq = 5000.0
-        elif w["Wavelength"] == 2:
-            line_freq = 15000.0
-        else:
-            print(w["GName"])
-            print("Wavelength {0} has no frequency".format(w["Wavelength"]))
-            line_freq = np.nan
+            line_freq = 30000.0/w["Wavelength"]
         resolution = np.nan
         if w["Resolution"] != "":
             resolution = float(w["Resolution"].replace("~", ""))  # arcmin
@@ -471,3 +459,65 @@ def add_detections(db, wisefile):
         )
     print("Done!")
     print()
+    
+    print("Update with GDIGS sources")
+
+    # Read the GDIGS data
+    gdigsfile = 'data/gdigs_newregions7.tab'
+    gdigs_new = np.genfromtxt(
+        gdigsfile,
+        delimiter="&",
+        comments="%",
+        dtype=None,
+        autostrip=True,
+        encoding="utf-8",
+        names = ['gname', 'glong', 'glat', 'radius', 't_l', 'e_t_l', 'vlsr', 'e_vlsr', 'fwhm', 'e_fwhm', 'rms', 'snr']
+        )
+
+    # Fix names
+    gdigs_new['gname'] = [s.replace('$' , '') for s in gdigs_new['gname']]
+    gdigs_new['gname'] = [s.replace('*' , '') for s in gdigs_new['gname']]
+
+    # get column names   
+    query = "SELECT * FROM Detections WHERE name='G012.576+00.221'"
+    c = conn.execute(query)
+    columns = [column[0] for column in c.description]
+    
+    # add detections
+    with sqlite3.connect(db) as conn:
+        cur = conn.cursor()
+        for i in range(len(gdigs_new)):
+            query = "UPDATE Detections SET" +\
+                    " line_freq=5.76" +\
+                    ", telescope='GBT'" +\
+                    ", lines='H95-H117'" +\
+                    ", author='Linville et al. (2023)'" +\
+                    ", line=" + str(gdigs_new['t_l'][i]) +\
+                    ", e_line=" + str(gdigs_new['e_t_l'][i]) +\
+                    ", line_unit='mK'" +\
+                    ", vlsr=" + str(gdigs_new['vlsr'][i]) +\
+                    ", e_vlsr=" + str(gdigs_new['e_vlsr'][i]) +\
+                    ", fwhm=" + str(gdigs_new['fwhm'][i]) +\
+                    ", e_fwhm=" + str(gdigs_new['e_fwhm'][i]) +\
+                    " WHERE name='" + gdigs_new['gname'][i] + "'"
+            cur.execute(query)
+        else:
+            # copy previous row
+            query = "INSERT INTO Detections (" + ", ".join(columns[1:]) + ") SELECT " +\
+             ", ".join(columns[1:]) + " FROM Detections WHERE name='" +\
+              gdigs_new['gname'][i][0:15] + "'"
+            cur.execute(query)
+
+            # insert new info
+            query = "UPDATE Detections SET" +\
+                    " line=" + str(gdigs_new['t_l'][i]) +\
+                    ", e_line=" + str(gdigs_new['e_t_l'][i]) +\
+                    ", line_unit='mK'" +\
+                    ", vlsr=" + str(gdigs_new['vlsr'][i]) +\
+                    ", e_vlsr=" + str(gdigs_new['e_vlsr'][i]) +\
+                    ", fwhm=" + str(gdigs_new['fwhm'][i]) +\
+                    ", e_fwhm=" + str(gdigs_new['e_fwhm'][i]) +\
+                    " WHERE id=" + str(cur.lastrowid)
+            cur.execute(query)
+            
+        print("Done!")
