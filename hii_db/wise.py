@@ -3,7 +3,7 @@ wise.py
 
 Utilities for adding WISE Catalog information to the database.
 
-Copyright(C) 2020-2021 by
+Copyright(C) 2020-2023 by
 Trey V. Wenger; tvwenger@gmail.com
 
 GNU General Public License v3 (GNU GPLv3)
@@ -306,12 +306,14 @@ def add_detections(db, wisefile):
             continue
 
         # Set other properties
+        obs_type = None
         if "alpha" in w["Lines"]:
             line_unit = "optical"
             cont_unit = "optical"
         else:
             line_unit = "mK"
             cont_unit = "mK"
+            obs_type = "peak"
         if line_unit == "optical":
             line_freq = 456700000.0
         elif w["Wavelength"] == 3:
@@ -385,6 +387,7 @@ def add_detections(db, wisefile):
                 w["T_e"],
                 w["Lines"],
                 beam_area,
+                obs_type,
                 w["Telescope"],
                 w["Author"],
                 "WISE Catalog",
@@ -401,8 +404,8 @@ def add_detections(db, wisefile):
         (name, ra, dec, glong, glat, line_freq, component,
         line, e_line, line_unit, vlsr, e_vlsr, fwhm, e_fwhm,
         cont_freq, cont, e_cont, cont_unit, area, area_unit, te,
-        lines, beam_area, telescope, author, source) VALUES
-        (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        lines, beam_area, type, telescope, author, source) VALUES
+        (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """,
             rows,
         )

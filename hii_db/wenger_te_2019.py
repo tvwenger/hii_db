@@ -102,6 +102,16 @@ def add_detections(db):
 
         # Loop over peak/total
         for datatype in ["peak", "total"]:
+            # Read continuum info
+            fname = os.path.join(
+                "data",
+                "wenger_te_2019",
+                sb,
+                field,
+                "{0}.clean.{1}.continfo.txt".format(reg, datatype),
+            )
+            cont_data = np.genfromtxt(fname, dtype=None, names=True, encoding="UTF-8")
+
             # Read spectrum info
             fname = os.path.join(
                 "data",
@@ -156,6 +166,13 @@ def add_detections(db):
                     lineid = "H87-H93"
                 lineid = lineid.replace("a", "")
 
+                # match closest frequency in cont_data to estimate beam size and region size
+                match = np.argmin(np.abs(spec["frequency"] - cont_data["frequency"]))
+                area = np.nan
+                if datatype == "total":
+                    area = cont_data["area_arcsec"][match]
+                beam_area = cont_data["beam_arcsec"][match]
+
                 # Fix small errors
                 e_velo = np.max([spec["e_velo"], 0.1])
                 e_line = np.max([spec["e_line"], 0.01])
@@ -186,6 +203,9 @@ def add_detections(db):
                     spec["rms"],
                     unit,
                     cont_qf,
+                    area,
+                    "arcsec2",
+                    beam_area,
                     spec["line2cont"],
                     e_line2cont,
                     spec["elec_temp"],
@@ -209,9 +229,9 @@ def add_detections(db):
         (name, ra, dec, glong, glat, line_freq, component,
         line, e_line, line_unit, vlsr, e_vlsr, fwhm, e_fwhm, spec_rms,
         line_snr, line_qf, cont_freq, cont, e_cont, cont_unit,
-        cont_qf, linetocont, e_linetocont, te, e_te,
+        cont_qf, area, area_unit, beam_area, linetocont, e_linetocont, te, e_te,
         lines, telescope, author, source, type, taper) VALUES
-        (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """,
             rows,
         )

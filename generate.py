@@ -4,7 +4,7 @@ generate.py
 Generate the HII region database, following the schema described
 in schema.txt.
 
-Copyright(C) 2020-2021 by
+Copyright(C) 2020-2023 by
 Trey V. Wenger; tvwenger@gmail.com
 
 GNU General Public License v3 (GNU GPLv3)
@@ -23,7 +23,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 2020-04-01 Trey V. Wenger
-2021-09-30 Trey V. Wenger reorganization
+2021-09-30 Trey V. Wenger - reorganization
+2023-05-24 Trey V. Wenger - Adjust schema to v5
 """
 
 import argparse

@@ -3,7 +3,7 @@ utils.py
 
 General utilities.
 
-Copyright(C) 2020-2021 by
+Copyright(C) 2020-2023 by
 Trey V. Wenger; tvwenger@gmail.com
 
 GNU General Public License v3 (GNU GPLv3)
@@ -22,7 +22,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 2020-04-01 Trey V. Wenger
-2021-09-30 Trey V. Wenger reorganization
+2021-09-30 Trey V. Wenger - reorganization
+2023-05-24 Trey V. Wenger - Adjust schema to v5
 """
 
 import os
@@ -50,7 +51,6 @@ def reset(db, wise_only=False):
         # Delete tables if present (need to delete link tables first)
         cur.execute("DROP TABLE IF EXISTS CatalogDetections")
         cur.execute("DROP TABLE IF EXISTS CatalogGroups")
-        cur.execute("DROP TABLE IF EXISTS FieldsDetections")
         cur.execute("DROP TABLE IF EXISTS Catalog")
         cur.execute("DROP TABLE IF EXISTS Groups")
         cur.execute("DROP TABLE IF EXISTS Detections")
@@ -88,20 +88,19 @@ def reset(db, wise_only=False):
         """
         )
 
-        if not wise_only:
-            # Fields table
-            cur.execute(
-                """
-            CREATE TABLE Fields
-            (id integer primary key autoincrement,
-            name text,
-            ra real,
-            dec real,
-            glong real,
-            glat real,
-            hpbw real)
+        # Fields table
+        cur.execute(
             """
-            )
+        CREATE TABLE Fields
+        (id integer primary key autoincrement,
+        name text,
+        ra real,
+        dec real,
+        glong real,
+        glat real,
+        hpbw real)
+        """
+        )
 
         # Detections table
         cur.execute(
@@ -144,7 +143,9 @@ def reset(db, wise_only=False):
         author text,
         source text,
         type text,
-        taper text)
+        taper text,
+        field_id int,
+        FOREIGN KEY(field_id) REFERENCES Fields(id))
         """
         )
 
@@ -171,17 +172,6 @@ def reset(db, wise_only=False):
         """
         )
 
-        if not wise_only:
-            # Fields <=> Detections
-            cur.execute(
-                """
-            CREATE TABLE FieldsDetections
-            (field_id int,
-            detection_id int,
-            FOREIGN KEY(field_id) REFERENCES Fields(id),
-            FOREIGN KEY(detection_id) REFERENCES Detections(id))
-            """
-            )
     print("Done!")
     print()
 

@@ -1,6 +1,15 @@
 This database contains all of our radio recombination data about
 HII regions in the WISE Catalog of Galactic HII Regions.
 
+==========
+Generation
+==========
+python generate.py db/hii_v5_20230524.db
+python update_kdar.py db/hii_v5_20230524.db --files data/hi_kdar_2023/*
+python add_parallax.py db/hii_v5_20230524.db --data data/reid_2019/reid2019_merge.txt --refs data/reid_2019/reid2019_refs.txt
+# python add_distances.py new_database.db -n 1000 -r reid19_rotcurve -t Distances_Reid2019
+sqlite3 db/hii_v4_20230209.db ".dump Distances_Reid2019" | sqlite3 db/hii_v5_20230524.db
+
 =========
 Changelog
 =========
@@ -40,6 +49,14 @@ hii_v2_20201203.db
 hii_v3_20210930.db
 - Generated using WISE Catalog wise_hii_V3.0_hrds.csv
 - Version hii_v3_20210930_wise.db contains only WISE Catalog data
+
+hii_v4_20230209.db
+- Updated KDARs with preliminary IGPS and ATCA work.
+
+hii_v5_20230524.db
+- Re-organized schema, removed FieldsDetections since each detection
+  is in only one field
+- Assign VLA and SHRDS Full Catalog beam sizes for line data
 
 =======
 Catalog
@@ -139,6 +156,7 @@ source       :: from where the data were imported
 type         :: "peak" = peak brightness, "total" = total flux
 taper        :: "notaper" = not tapered; "notapsm" = not tapered, smoothed;
                 "uvtaper" = tapered; "uvtapsm" tapered and smoothed.
+field_id     :: ID of Field containing detection
 
 =================
 CatalogDetections 
@@ -150,15 +168,6 @@ catalog_id   :: identifier in Catalog
 detection_id :: identifier in Detections
 separation   :: angular separation between detection observed position
 	        and catalog source position (arcsec)
-
-================
-FieldsDetections (excluded in version *_wise.db)
-================
-Relationship between Fields and Detections tables. Multiple Detections
-can belong to the same Field.
-
-field_id :: identifier in Fields
-detection_id   :: identifier in Detections
 
 ==================
 Distances_Reid2019

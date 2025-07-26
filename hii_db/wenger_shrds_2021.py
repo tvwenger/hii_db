@@ -135,6 +135,8 @@ def add_detections(db):
     print()
 
     # Loop over regions, populate rows
+    line_rows = []
+    cont_rows = []
     print("Adding Wenger+2021 SHRDS data to Detections and FieldsDetections...")
     for field, field_id, reg in data:
         gname = reg
@@ -151,6 +153,15 @@ def add_detections(db):
 
         # Loop over peak/total
         for datatype in ["peak", "total"]:
+            # Read continuum info
+            fname = os.path.join(
+                "data",
+                "wenger_shrds_2021",
+                field,
+                "{0}.clean.{1}.continfo.txt".format(reg, datatype),
+            )
+            cont_data = np.genfromtxt(fname, dtype=None, names=True, encoding="UTF-8")
+
             # Read spectrum info
             fname = os.path.join(
                 "data",
@@ -185,7 +196,7 @@ def add_detections(db):
             cont_qf = qf_number[qf_letter.index(cont_qf)]
             line_qf = qf_number[qf_letter.index(line_qf)]
 
-            # Add rows
+            # Add line rows
             taper = "notaper"
             if "notaper.imsmooth" in reg:
                 taper = "notapsm"
@@ -202,6 +213,13 @@ def add_detections(db):
                 if lineid == "all":
                     lineid = "H88-H112"
                 lineid = lineid.replace("a", "")
+
+                # match closest frequency in cont_data to estimate beam size and region size
+                match = np.argmin(np.abs(spec["frequency"] - cont_data["frequency"]))
+                area = np.nan
+                if datatype == "total":
+                    area = cont_data["area_arcsec"][match]
+                beam_area = cont_data["beam_arcsec"][match]
 
                 # Fix small errors
                 e_velo = np.max([spec["e_velo"], 0.1])
@@ -264,6 +282,9 @@ def add_detections(db):
                     spec["rms"],
                     unit,
                     cont_qf,
+                    area,
+                    "arcsec2",
+                    beam_area,
                     line2cont,
                     e_line2cont,
                     elec_temp,
@@ -274,44 +295,11 @@ def add_detections(db):
                     "SHRDS Full Catalog",
                     datatype,
                     taper,
+                    int(field_id),
                 )
+                line_rows.append(row)
 
-                # Populate Detections table
-                with sqlite3.connect(db) as conn:
-                    cur = conn.cursor()
-                    cur.execute("PRAGMA foreign_keys = ON")
-                    cur.execute(
-                        """
-                    INSERT INTO Detections
-                    (name, ra, dec, glong, glat, line_freq, component,
-                    line, e_line, line_unit, vlsr, e_vlsr, fwhm, e_fwhm, spec_rms,
-                    line_snr, line_qf, cont_freq, cont, e_cont, cont_unit,
-                    cont_qf, linetocont, e_linetocont, te, e_te,
-                    lines, telescope, author, source, type, taper) VALUES
-                    (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-                    """,
-                        row,
-                    )
-                    detection_id = cur.lastrowid
-
-                    # Add to FieldsDetections
-                    cur.execute(
-                        """
-                    INSERT INTO FieldsDetections (field_id, detection_id) VALUES (?, ?)
-                    """,
-                        [int(field_id), int(detection_id)],
-                    )
-
-            # Read continuum info
-            fname = os.path.join(
-                "data",
-                "wenger_shrds_2021",
-                field,
-                "{0}.clean.{1}.continfo.txt".format(reg, datatype),
-            )
-            cont_data = np.genfromtxt(fname, dtype=None, names=True, encoding="UTF-8")
-
-            # Add rows
+            # Add cont rows
             taper = "notaper"
             if "notaper.imsmooth" in reg:
                 taper = "notapsm"
@@ -319,7 +307,6 @@ def add_detections(db):
             if datatype == "total":
                 unit = "mJy"
             for cont in cont_data:
-
                 # Get lineid
                 lineid = "cont"
                 if cont["spw"] != "cont":
@@ -343,7 +330,7 @@ def add_detections(db):
                     unit,
                     cont_qf,
                     area,
-                    "arcsec",
+                    "arcsec2",
                     cont["beam_arcsec"],
                     lineid,
                     "ATCA",
@@ -351,31 +338,39 @@ def add_detections(db):
                     "SHRDS Full Catalog",
                     datatype,
                     taper,
+                    int(field_id),
                 )
+                cont_rows.append(row)
 
-                # Populate Detections table
-                with sqlite3.connect(db) as conn:
-                    cur = conn.cursor()
-                    cur.execute("PRAGMA foreign_keys = ON")
-                    cur.execute(
-                        """
-                    INSERT INTO Detections
-                    (name, ra, dec, glong, glat, cont_freq, cont, e_cont, cont_unit,
-                    cont_qf, area, area_unit, beam_area,
-                    lines, telescope, author, source, type, taper) VALUES
-                    (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-                    """,
-                        row,
-                    )
-                    detection_id = cur.lastrowid
+    # Populate Detections table
+    with sqlite3.connect(db) as conn:
+        cur = conn.cursor()
+        cur.execute("PRAGMA foreign_keys = ON")
+        cur.executemany(
+            """
+        INSERT INTO Detections
+        (name, ra, dec, glong, glat, line_freq, component,
+        line, e_line, line_unit, vlsr, e_vlsr, fwhm, e_fwhm, spec_rms,
+        line_snr, line_qf, cont_freq, cont, e_cont, cont_unit,
+        cont_qf, area, area_unit, beam_area, linetocont, e_linetocont, te, e_te,
+        lines, telescope, author, source, type, taper, field_id) VALUES
+        (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """,
+            line_rows,
+        )
 
-                    # Add to FieldsDetections
-                    cur.execute(
-                        """
-                    INSERT INTO FieldsDetections (field_id, detection_id) VALUES (?, ?)
-                    """,
-                        [int(field_id), int(detection_id)],
-                    )
+        cur = conn.cursor()
+        cur.execute("PRAGMA foreign_keys = ON")
+        cur.executemany(
+            """
+        INSERT INTO Detections
+        (name, ra, dec, glong, glat, cont_freq, cont, e_cont, cont_unit,
+        cont_qf, area, area_unit, beam_area,
+        lines, telescope, author, source, type, taper, field_id) VALUES
+        (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """,
+            cont_rows,
+        )
     print("Done!")
     print()
 
@@ -416,7 +411,6 @@ def add_detections(db):
         nomatch = []
         rows = []
         for det, coord in zip(dets, det_coords):
-
             # Fix a few with bad region gnames
             check_gname = det["name"]
             match = np.where(wisecat["gname"] == check_gname)[0]
