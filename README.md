@@ -6,87 +6,25 @@ radio recombination line surveys. The database can be [downloaded through the
 Harvard Dataverse](https://doi.org/10.7910/DVN/NQVFLE). The structure of the database
 is described in `schema.txt`.
 
-## Requirements & Installation
-The following packages are required for this package to work "out-of-the-box"
-1. `astropy`
-2. `numpy`
-3. `kd` (from https://github.com/tvwenger/kd)
+## Data Source
+The data needed to generate the database can be downloaded from the [Harvard Dataverse]().
 
-The easiest way to run this code is
+## Installation
+Run this package in a new `conda` environment:
 ```bash
-pip install git+https://github.com/tvwenger/pyqt-fit.git
+mamba env create -n hii_db -c conda-forge "python<3.12" "numpy<2.0.0" scipy matplotlib pip pandas jupyter astropy
+mamba activate hii_db
+pip install git+https://github.com/tvwenger/pyqt-fit.git#egg=pyqt-fit[cython]
 pip install git+https://github.com/tvwenger/kd.git
+```
+
+Then clone this repository:
+```bash
 git clone https://github.com/tvwenger/hii_db.git
 ```
 
 ## Usage
-This repository includes a CSV version of the WISE Catalog of Galactic HII Regions, which
-can be used to populate a "WISE-only" version of the database (i.e., a database that does
-not include any ancillary radio recombination line data). This is accomplished via
-`generate.py` with the `--wiseonly` flag.
-
-```bash
-$ python generate.py --help
-usage: generate.py [-h] [--wise WISE] [--wiseonly] db
-
-HII Region Database Generator
-
-positional arguments:
-  db           The database filename
-
-optional arguments:
-  -h, --help   show this help message and exit
-  --wise WISE  WISE Catalog CSV filename (default: wise/wise_hii_V3.0_hrds.csv)
-  --wiseonly   Generate database with WISE Catalog only (default: False)
-```
-For example:
-```bash
-$ python generate.py new_database.db --wise wise/wise_hii_V3.0_hrds.csv --wiseonly
-```
-
-To add the parallax data from [Reid et al. (2019)](https://ui.adsabs.harvard.edu/abs/2019ApJ...885..131R/abstract) to the (existing) database, use `add_parallax.py`:
-```bash
-$ python add_parallax.py --help
-usage: add_parallax.py [-h] [--data DATA] [--refs REFS] db
-
-HII Region Database Parallax Table Generator
-
-positional arguments:
-  db           The database filename
-
-optional arguments:
-  -h, --help   show this help message and exit
-  --data DATA  The parallax data filename (default: data/reid_2019/reid2019_merge.txt)
-  --refs REFS  The parallax data references filename (default: data/reid_2019/reid2019_refs.txt)
-```
-For example:
-```bash
-$ python add_parallax.py new_database.db --data data/reid_2019/reid2019_merge.txt --refs data/reid_2019/reid2019_refs.txt
-```
-
-To add [Wenger et al. (2018)](https://ui.adsabs.harvard.edu/abs/2018ApJ...856...52W/abstract) Monte Carlo kinematic distances to the (existing) database, use `add_distances.py`:
-```bash
-$ python add_distances.py --help
-usage: add_distances.py [-h] [-n NUM_SAMPLES] [-r ROTCURVE] [-t TABLENAME] db
-
-HII Region Database Distances Table Generator
-
-positional arguments:
-  db                    Database filename
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -n NUM_SAMPLES, --num_samples NUM_SAMPLES
-                        Number of Monte Carlo samples (default: 5000)
-  -r ROTCURVE, --rotcurve ROTCURVE
-                        Rotation curve (default: reid19_rotcurve)
-  -t TABLENAME, --tablename TABLENAME
-                        Table name (default: Distances_Reid2019)
-```
-For example:
-```bash
-$ python add_distances.py new_database.db -n 5000 -r reid19_rotcurve -t Distances_Reid2019
-```
+The database is built interactively with the notebook `generate_database.ipynb`. See that notebook for more information.
 
 ## Issues and Contributing
 

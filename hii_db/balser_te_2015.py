@@ -3,34 +3,19 @@ balser_te_2015.py
 
 Utilities for adding Balser+2015 data to the database.
 
-Copyright(C) 2020-2021 by
+Copyright(C) 2020-2025 by
 Trey V. Wenger; tvwenger@gmail.com
-
-GNU General Public License v3 (GNU GPLv3)
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published
-by the Free Software Foundation, either version 3 of the License,
-or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-2020-04-01 Trey V. Wenger
-2021-09-30 Trey V. Wenger reorganization
+L. D. Anderson;
+This code is licensed under MIT license (see LICENSE for details)
 """
 
+import os
 import numpy as np
 import sqlite3
 from astropy.coordinates import SkyCoord
 
 
-def add_detections(db, datatype):
+def add_detections(db, datatype, data_dir="data"):
     """
     Add Balser+2015 GBT and 140 Foot data to Detections table.
     Also populate Catalog->Detections.
@@ -40,14 +25,16 @@ def add_detections(db, datatype):
             database filename
         datatype :: string
             Data to add. Either "GBT" or "140 Foot"
+        data_dir :: string
+            Path to data directory
 
     Returns: Nothing
     """
     print("Adding Balser+2015 {0} data to Detections...".format(datatype))
     if datatype == "GBT":
-        fname = "data/balser_2015/gbtRRL_balser2015.csv"
+        fname = os.path.join(data_dir, "te", "balser_2015", "gbtRRL_balser2015.csv")
     elif datatype == "140 Foot":
-        fname = "data/balser_2015/140foot_balser2015.csv"
+        fname = os.path.join(data_dir, "te", "balser_2015", "140foot_balser2015.csv")
     else:
         raise ValueError("Invalid data type: {0}".format(datatype))
     data = np.genfromtxt(
@@ -78,10 +65,10 @@ def add_detections(db, datatype):
         if cont_peak > 0.0:
             linetocont_peak = line_peak / cont_peak
             e_linetocont_peak = np.sqrt(
-                linetocont_peak ** 2.0
+                linetocont_peak**2.0
                 * (
-                    e_line_peak ** 2.0 / line_peak ** 2.0
-                    + e_cont_peak ** 2.0 / cont_peak ** 2.0
+                    e_line_peak**2.0 / line_peak**2.0
+                    + e_cont_peak**2.0 / cont_peak**2.0
                 )
             )
         else:
@@ -102,7 +89,7 @@ def add_detections(db, datatype):
                 2.647 * dat["tl"] / eta_b * (dat["cont_width"] / 60.0 / 3.5) ** 2.0
             )
             e_line_total = np.sqrt(
-                line_total ** 2.0
+                line_total**2.0
                 * (
                     (dat["e_tl"] / dat["tl"]) ** 2.0
                     + 4.0 * (dat["e_cont_width"] / dat["cont_width"]) ** 2.0
@@ -112,7 +99,7 @@ def add_detections(db, datatype):
                 2.647 * dat["tc"] / eta_b * (dat["cont_width"] / 60.0 / 3.5) ** 2.0
             )
             e_cont_total = np.sqrt(
-                cont_total ** 2.0
+                cont_total**2.0
                 * (
                     (dat["e_tc"] / dat["tc"]) ** 2.0
                     + 4.0 * (dat["e_cont_width"] / dat["cont_width"]) ** 2.0
@@ -120,10 +107,10 @@ def add_detections(db, datatype):
             )
             linetocont_total = line_total / cont_total
             e_linetocont_total = np.sqrt(
-                linetocont_total ** 2.0
+                linetocont_total**2.0
                 * (
-                    e_line_total ** 2.0 / line_total ** 2.0
-                    + e_cont_total ** 2.0 / cont_total ** 2.0
+                    e_line_total**2.0 / line_total**2.0
+                    + e_cont_total**2.0 / cont_total**2.0
                 )
             )
 

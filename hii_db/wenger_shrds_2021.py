@@ -4,26 +4,10 @@ wenger_shrds_2021.py
 Utilities for adding Wenger+2021 SHRDS Full Catalog data to the
 database.
 
-Copyright(C) 2020-2021 by
+Copyright(C) 2020-2025 by
 Trey V. Wenger; tvwenger@gmail.com
-
-GNU General Public License v3 (GNU GPLv3)
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published
-by the Free Software Foundation, either version 3 of the License,
-or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-2020-04-01 Trey V. Wenger
-2021-09-30 Trey V. Wenger reorganization
+L. D. Anderson;
+This code is licensed under MIT license (see LICENSE for details)
 """
 
 import os
@@ -57,7 +41,7 @@ calibrators = [
 ]
 
 
-def add_detections(db):
+def add_detections(db, data_dir="data"):
     """
     Read SHRDS detections and populate detections table.
     Also populate Catalog->Detections, Fields, and Fields->Detections.
@@ -65,19 +49,25 @@ def add_detections(db):
     Inputs:
         db :: string
             Database filename
+        data_dir :: string
+            Path to data directory
 
     Returns: Nothing
     """
     print("Adding Wenger+2021 SHRDS Fields...")
 
     # Read quality factor data
+
     qf_data = np.genfromtxt(
-        "data/wenger_shrds_2021/shrds_qfs.txt", dtype=None, names=True, encoding="utf-8"
+        os.path.join(data_dir, "rrl_surveys", "wenger_shrds_2021", "shrds_qfs.txt"),
+        dtype=None,
+        names=True,
+        encoding="utf-8",
     )
 
     # Loop over Fields
     data = []
-    fields = glob.glob("data/wenger_shrds_2021/*")
+    fields = glob.glob(os.path.join(data_dir, "rrl_surveys", "wenger_shrds_2021", "*"))
     fields.sort()
     for field in fields:
         if not os.path.isdir(field):
@@ -144,7 +134,7 @@ def add_detections(db):
         gname = gname.replace(".notaper.imsmooth.rgn", "")
 
         # Get position from region file
-        fname = os.path.join("data", "wenger_shrds_2021", field, reg)
+        fname = os.path.join(data_dir, "rrl_surveys", "wenger_shrds_2021", field, reg)
         coord = parse_region_coord(fname)
         ra = coord.fk5.ra.deg
         dec = coord.fk5.dec.deg
@@ -155,7 +145,8 @@ def add_detections(db):
         for datatype in ["peak", "total"]:
             # Read continuum info
             fname = os.path.join(
-                "data",
+                data_dir,
+                "rrl_surveys",
                 "wenger_shrds_2021",
                 field,
                 "{0}.clean.{1}.continfo.txt".format(reg, datatype),
@@ -164,7 +155,8 @@ def add_detections(db):
 
             # Read spectrum info
             fname = os.path.join(
-                "data",
+                data_dir,
+                "rrl_surveys",
                 "wenger_shrds_2021",
                 field,
                 "{0}.clean.{1}.wt.specinfo.txt".format(reg, datatype),
