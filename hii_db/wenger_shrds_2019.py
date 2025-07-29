@@ -4,26 +4,10 @@ wenger_shrds_2019.py
 Utilities for adding Wenger+2019 SHRDS Bright Catalog data to the
 database.
 
-Copyright(C) 2020-2021 by
+Copyright(C) 2020-2025 by
 Trey V. Wenger; tvwenger@gmail.com
-
-GNU General Public License v3 (GNU GPLv3)
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published
-by the Free Software Foundation, either version 3 of the License,
-or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-2020-04-01 Trey V. Wenger
-2021-09-30 Trey V. Wenger reorganization
+L. D. Anderson;
+This code is licensed under MIT license (see LICENSE for details)
 """
 
 import os
@@ -54,7 +38,7 @@ calibrators = [
 ]
 
 
-def add_detections(db):
+def add_detections(db, data_dir="data"):
     """
     Read SHRDS detections and populate detections table.
     Also populate Catalog->Detections.
@@ -62,6 +46,8 @@ def add_detections(db):
     Inputs:
         db :: string
             Database filename.
+        data_dir :: string
+            Path to data directory
 
     Returns: Nothing
     """
@@ -69,13 +55,17 @@ def add_detections(db):
 
     # Read quality factor data
     qf_data_notap = np.genfromtxt(
-        "data/wenger_shrds_2019/shrds_qfs_notap.txt",
+        os.path.join(
+            data_dir, "rrl_surveys", "wenger_shrds_2019", "shrds_qfs_notap.txt"
+        ),
         dtype=None,
         names=True,
         encoding="utf-8",
     )
     qf_data_uvtap = np.genfromtxt(
-        "data/wenger_shrds_2019/shrds_qfs_uvtap.txt",
+        os.path.join(
+            data_dir, "rrl_surveys", "wenger_shrds_2019", "shrds_qfs_uvtap.txt"
+        ),
         dtype=None,
         names=True,
         encoding="utf-8",
@@ -83,42 +73,34 @@ def add_detections(db):
 
     # Loop over epochs
     data = []
-    sbs = glob.glob("data/wenger_shrds_2019/*")
-    sbs.sort()
-    for sb in sbs:
-        if not os.path.isdir(sb):
+    fields = glob.glob(os.path.join(data_dir, "rrl_surveys", "wenger_shrds_2019", "*"))
+    fields.sort()
+    for field in fields:
+        if not os.path.isdir(field):
             continue
-        mysb = sb.split("/")[-1]
+        myfield = field.split("/")[-1]
+        if myfield in calibrators:
+            # skip calibrators
+            continue
 
-        # Loop over fields
-        fields = glob.glob(os.path.join(sb, "*"))
-        fields.sort()
-        for field in fields:
-            if not os.path.isdir(field):
-                continue
-            myfield = field.split("/")[-1]
-            if myfield in calibrators:
-                # skip calibrators
-                continue
+        # Find region files
+        regs = glob.glob(os.path.join(field, "*.rgn"))
+        regs.sort()
 
-            # Find region files
-            regs = glob.glob(os.path.join(field, "*.rgn"))
-            regs.sort()
-
-            # Loop over regions, read data, and save sb/field/region
-            for reg in regs:
-                myreg = reg.split("/")[-1]
-                data.append([mysb, myfield, myreg])
+        # Loop over regions, read data, and save sb/field/region
+        for reg in regs:
+            myreg = reg.split("/")[-1]
+            data.append([myfield, myreg])
 
     # Loop over regions, populate rows
     rows = []
-    for sb, field, reg in data:
+    for field, reg in data:
         gname = reg
         gname = gname.replace(".notaper.rgn", "")
         gname = gname.replace(".uvtaper.rgn", "")
 
         # Get position from region file
-        fname = os.path.join("data", "wenger_shrds_2019", sb, field, reg)
+        fname = os.path.join(data_dir, "rrl_surveys", "wenger_shrds_2019", field, reg)
         coord = parse_region_coord(fname)
         ra = coord.fk5.ra.deg
         dec = coord.fk5.dec.deg
@@ -127,18 +109,18 @@ def add_detections(db):
 
         # Read spectrum info
         fname = os.path.join(
-            "data",
+            data_dir,
+            "rrl_surveys",
             "wenger_shrds_2019",
-            sb,
             field,
             "{0}.clean.wt.specinfo.txt".format(reg),
         )
         qf_data = qf_data_notap
         if "uvtaper" in reg:
             fname = os.path.join(
-                "data",
+                data_dir,
+                "rrl_surveys",
                 "wenger_shrds_2019",
-                sb,
                 field,
                 "{0}.clean.uvtaper.wt.specinfo.txt".format(reg),
             )
@@ -165,16 +147,15 @@ def add_detections(db):
             # Get QFs
             check_comp = "a" if comp is None else comp
             ind = np.where(
-                (qf_data["epoch"] == sb)
-                * (qf_data["field"] == field)
+                (qf_data["field"] == field)
                 * (qf_data["gname"] == gname)
                 * (qf_data["comp"] == check_comp)
             )[0]
             if len(ind) != 1:
                 print(ind)
                 raise ValueError(
-                    "No match for Bright Catalog {0} {1} {2} {3} in QF file".format(
-                        sb, field, reg, comp
+                    "No match for Bright Catalog {0} {1} {2} in QF file".format(
+                        field, reg, comp
                     )
                 )
             ind = ind[0]

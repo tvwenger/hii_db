@@ -4,26 +4,10 @@ wenger_brown_pilot.py
 Utilities for adding Brown+2017 SHRDS pilot survey data to the
 database.
 
-Copyright(C) 2020-2021 by
+Copyright(C) 2020-2025 by
 Trey V. Wenger; tvwenger@gmail.com
-
-GNU General Public License v3 (GNU GPLv3)
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published
-by the Free Software Foundation, either version 3 of the License,
-or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-2020-04-01 Trey V. Wenger
-2021-09-30 Trey V. Wenger reorganization
+L. D. Anderson;
+This code is licensed under MIT license (see LICENSE for details)
 """
 
 import os
@@ -32,7 +16,7 @@ import sqlite3
 from astropy.coordinates import SkyCoord
 
 
-def add_detections(db):
+def add_detections(db, data_dir="data"):
     """
     Read SHRDS Pilot data and populate detections table.
     Also populate Catalog->Detections.
@@ -40,12 +24,14 @@ def add_detections(db):
     Inputs:
         db :: string
             Database filename
+        data_dir :: string
+            Path to data directory
     """
     print("Adding Brown+2017 SHRDS Pilot data to Detections...")
 
     # Read data
     data = np.genfromtxt(
-        os.path.join("data", "brown_shrds_pilot", "shrds_pilot.txt"),
+        os.path.join(data_dir, "rrl_surveys", "brown_shrds_pilot", "shrds_pilot.txt"),
         dtype=[
             ("gname", "U15"),
             ("lineid", "U3"),

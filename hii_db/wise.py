@@ -3,30 +3,15 @@ wise.py
 
 Utilities for adding WISE Catalog information to the database.
 
-Copyright(C) 2020-2023 by
+Copyright(C) 2020-2025 by
 Trey V. Wenger; tvwenger@gmail.com
-
-GNU General Public License v3 (GNU GPLv3)
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published
-by the Free Software Foundation, either version 3 of the License,
-or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-2020-04-01 Trey V. Wenger
-2021-09-30 Trey V. Wenger reorganization
+L. D. Anderson;
+This code is licensed under MIT license (see LICENSE for details)
 """
 
 import sqlite3
 import numpy as np
+import pandas as pd
 from astropy.coordinates import SkyCoord
 
 
@@ -45,17 +30,9 @@ def gen_catalog(db, wisefile):
     print("Generating WISE Catalog table...")
 
     # Read the WISE catalog
-    wise = np.genfromtxt(
-        wisefile,
-        delimiter=",",
-        dtype=None,
-        names=True,
-        autostrip=True,
-        encoding="utf-8",
-    )
-    wise_coords = SkyCoord(wise["GLong"], wise["GLat"], frame="galactic", unit="deg")
-    wise_ra = wise_coords.fk5.ra.deg
-    wise_dec = wise_coords.fk5.dec.deg
+    wise = pd.read_csv(wisefile, low_memory=False)
+    print(len(wise))
+    print(len(wise["GName"].unique()))
 
     # Populate Catalog
     with sqlite3.connect(db) as conn:
@@ -64,21 +41,19 @@ def gen_catalog(db, wisefile):
         rows = [
             (
                 w["GName"],
-                w["Name"] if w["Name"] != "" else None,
-                w["HII_Name"] if w["HII_Name"] != "" else None,
+                w["Alias"],
+                w["Name"],
                 w["Catalog"],
-                ra,
-                dec,
+                w["RA (J2000)"],
+                w["Dec (J2000)"],
                 w["GLong"],
                 w["GLat"],
-                w["Size"],
-                w["KDAR"].replace("(", "").replace(")", "")
-                if w["KDAR"] != ""
-                else None,
-                w["Distance_Method"] if w["Distance_Method"] != "" else None,
-                w["Distance_Author"] if w["Distance_Author"] != "" else None,
+                w["Radius"],
+                w["KDAR"],
+                w["DMethod"],
+                w["Author_KDAR"],
             )
-            for w, ra, dec in zip(wise, wise_ra, wise_dec)
+            for i, w in wise.iterrows()
         ]
         cur.executemany(
             """
@@ -110,21 +85,14 @@ def gen_groups(db, wisefile):
     print("Generating Groups table...")
 
     # Read the WISE catalog
-    wise = np.genfromtxt(
-        wisefile,
-        delimiter=",",
-        dtype=None,
-        names=True,
-        autostrip=True,
-        encoding="utf-8",
-    )
+    wise = pd.read_csv(wisefile, low_memory=False, dtype={"Group": object})
 
     # Get group names/info
     all_groups = []
     group_info = []
     group_members = []
-    for w in wise:
-        if w["Group"] == "":
+    for i, w in wise.iterrows():
+        if not isinstance(w["Group"], str):
             continue
         group = w["Group"].strip()
 
@@ -134,19 +102,28 @@ def gen_groups(db, wisefile):
             idx = all_groups.index(group)
             if group_info[idx][0] == "":
                 group_info[idx][0] = w["Group_VLSR"]
-            elif w["Group_VLSR"] != "" and group_info[idx][0] != w["Group_VLSR"]:
-                print("Group {0} different VLSR".format(group))
+            elif isinstance(w["Group"], str) and group_info[idx][0] != w["Group_VLSR"]:
+                print(
+                    "Group {0} different VLSR".format(group)
+                    + f" {w['Group_VLSR']} vs {group_info[idx][0]}"
+                )
                 continue
 
             if group_info[idx][1] == "":
                 group_info[idx][1] = w["Group_e_VLSR"]
-            elif w["Group_e_VLSR"] != "" and group_info[idx][1] != w["Group_e_VLSR"]:
+            elif (
+                isinstance(w["Group_e_VLSR"], str)
+                and group_info[idx][1] != w["Group_e_VLSR"]
+            ):
                 print("Group {0} different e_VLSR".format(group))
                 continue
 
             if group_info[idx][2] == "":
                 group_info[idx][2] = w["Group_KDAR"]
-            elif w["Group_KDAR"] != "" and group_info[idx][2] != w["Group_KDAR"]:
+            elif (
+                isinstance(w["Group_KDAR"], str)
+                and group_info[idx][2] != w["Group_KDAR"]
+            ):
                 print("Group {0} different KDAR".format(group))
                 continue
 
@@ -167,7 +144,7 @@ def gen_groups(db, wisefile):
                 group,
                 data[0] if data[0] != "" else None,
                 data[1] if data[1] != "" else None,
-                data[2].replace("(", "").replace(")", "") if data[2] != "" else None,
+                data[2],
             )
             for group, data in zip(all_groups, group_info)
         ]
@@ -234,23 +211,16 @@ def add_detections(db, wisefile):
     print("Adding WISE Detections...")
 
     # Read the WISE Catalog
-    wise = np.genfromtxt(
-        wisefile,
-        delimiter=",",
-        dtype=None,
-        names=True,
-        autostrip=True,
-        encoding="utf-8",
-    )
+    wise = pd.read_csv(wisefile, low_memory=False)
 
     # Add WISE Detections to table, split multi-component sources
     # into two rows in Detections table
     rows = []
-    for wiseidx, w in enumerate(wise):
+    for wiseidx, w in wise.iterrows():
         # skip non-detections
-        if w["VLSR"] == "":
+        if np.isnan(w["VLSR"]):
             continue
-        if w["VLSR"] == "0.0" and w["FWHM"] == "":
+        if w["VLSR"] == 0.0 and np.isnan(w["FWHM"]):
             continue
 
         # Get coordinate
@@ -261,28 +231,34 @@ def add_detections(db, wisefile):
         dec = coord.fk5.dec.deg
 
         # Split multi-component sources, handle missing data
-        ncomp = len(w["VLSR"].split(";"))
-        vlsrs = np.array([float(f) for f in w["VLSR"].split(";")])
-        if len(w["e_VLSR"]) > 0:
-            e_vlsrs = np.array([float(f) for f in w["e_VLSR"].split(";")])
-        else:
-            e_vlsrs = np.array([np.nan] * ncomp)
+        vlsr_cols = ["VLSR"] + [f"VLSR{i}" for i in range(2, 5)]
+        vlsrs = np.array([w[col] for col in vlsr_cols if not np.isnan(w[col])])
+        e_vlsrs = np.array([w["e_" + col] for col in vlsr_cols if not np.isnan(w[col])])
+        ncomp = len(vlsrs)
 
-        fwhms = np.array([float(f) for f in w["FWHM"].split(";")])
-        if len(w["e_FWHM"]) > 0:
-            e_fwhms = np.array([float(f) for f in w["e_FWHM"].split(";")])
-        else:
-            e_fwhms = np.array([np.nan] * ncomp)
+        fwhm_cols = ["FWHM"] + [f"FWHM{i}" for i in range(2, 5)]
+        fwhms = np.array(
+            [w[col] for col, vcol in zip(fwhm_cols, vlsr_cols) if not np.isnan(w[vcol])]
+        )
+        e_fwhms = np.array(
+            [
+                w["e_" + col]
+                for col, vcol in zip(fwhm_cols, vlsr_cols)
+                if not np.isnan(w[vcol])
+            ]
+        )
 
-        if len(w["T_L"]) > 0:
-            tls = np.array([float(f) for f in w["T_L"].split(";")])
-        else:
-            tls = np.array([np.nan] * ncomp)
-
-        if len(w["e_T_L"]) > 0:
-            e_tls = np.array([float(f) for f in w["e_T_L"].split(";")])
-        else:
-            e_tls = np.array([np.nan] * ncomp)
+        tl_cols = ["TL"] + [f"TL{i}" for i in range(2, 5)]
+        tls = np.array(
+            [w[col] for col, vcol in zip(tl_cols, vlsr_cols) if not np.isnan(w[vcol])]
+        )
+        e_tls = np.array(
+            [
+                w["e_" + col]
+                for col, vcol in zip(tl_cols, vlsr_cols)
+                if not np.isnan(w[vcol])
+            ]
+        )
 
         # Fix Caswell & Haynes sources
         if "Caswell" in w["Author"]:
@@ -293,8 +269,17 @@ def add_detections(db, wisefile):
 
         # Confirm that each parameter has the same number of components
         if np.any(
-            np.array([len(e_vlsrs), len(fwhms), len(e_fwhms), len(tls), len(e_tls)])
-            != ncomp
+            np.array(
+                [
+                    np.isnan(vlsrs).sum(),
+                    np.isnan(e_vlsrs).sum(),
+                    np.isnan(fwhms).sum(),
+                    np.isnan(e_fwhms).sum(),
+                    np.isnan(tls).sum(),
+                    np.isnan(e_tls).sum(),
+                ]
+            )
+            != 0
         ):
             print("PROBLEM WITH {0} COMPONENTS".format(w["GName"]))
             print(vlsrs)
@@ -303,39 +288,28 @@ def add_detections(db, wisefile):
             print(e_fwhms)
             print(tls)
             print(e_tls)
-            continue
+            print("================================")
 
         # Set other properties
         obs_type = None
-        if "alpha" in w["Lines"]:
+        if w["Wavelength"] > 1.0e6:
             line_unit = "optical"
             cont_unit = "optical"
+            line_freq = 456700000.0
         else:
             line_unit = "mK"
             cont_unit = "mK"
             obs_type = "peak"
-        if line_unit == "optical":
-            line_freq = 456700000.0
-        elif w["Wavelength"] == 3:
-            line_freq = 10000.0
-        elif w["Wavelength"] == 5:
-            line_freq = 6000.0
-        elif w["Wavelength"] == 6:
-            line_freq = 5000.0
-        elif w["Wavelength"] == 2:
-            line_freq = 15000.0
-        else:
-            print(w["GName"])
-            print("Wavelength {0} has no frequency".format(w["Wavelength"]))
-            line_freq = np.nan
+            line_freq = 30000.0 / w["Wavelength"]  # cm -> MHz
         resolution = np.nan
-        if w["Resolution"] != "":
-            resolution = float(w["Resolution"].replace("~", ""))  # arcmin
+        if not np.isnan(w["Resolution"]):
+            resolution = float(w["Resolution"])  # arcmin
         beam_area = (
             np.pi * (resolution * 60.0) ** 2.0 / (4.0 * np.log(2.0))
         )  # sq. arcsec
-        area = np.pi * (w["HRDS_Size"]) ** 2.0 / (4.0 * np.log(2.0))  # sq. arcsec
-        area_unit = "arcsec2"
+        # area = np.pi * (w["HRDS_Size"]) ** 2.0 / (4.0 * np.log(2.0))  # sq. arcsec
+        # area_unit = "arcsec2"
+        area = 0.0
         if area == 0.0:
             area = None
             area_unit = None
@@ -343,11 +317,11 @@ def add_detections(db, wisefile):
         cont = np.nan
         e_cont = np.nan
         cont_unit = np.nan
-        if w["HRDS_Flux"] > 0.0:
-            cont_freq = 9000.0
-            cont = w["HRDS_Flux"]
-            e_cont = w["HRDS_e_Flux"]
-            cont_unit = "mJy"
+        # if w["HRDS_Flux"] > 0.0:
+        #     cont_freq = 9000.0
+        #     cont = w["HRDS_Flux"]
+        #     e_cont = w["HRDS_e_Flux"]
+        #     cont_unit = "mJy"
 
         # Loop over components, sorted by tl, and populate table
         comps = ["a", "b", "c", "d", "e"]
@@ -384,8 +358,9 @@ def add_detections(db, wisefile):
                 cont_unit,
                 area,
                 area_unit,
-                w["T_e"],
-                w["Lines"],
+                w["Te"],
+                w["e_Te"],
+                # w["Lines"],
                 beam_area,
                 obs_type,
                 w["Telescope"],
@@ -403,8 +378,8 @@ def add_detections(db, wisefile):
         INSERT INTO Detections
         (name, ra, dec, glong, glat, line_freq, component,
         line, e_line, line_unit, vlsr, e_vlsr, fwhm, e_fwhm,
-        cont_freq, cont, e_cont, cont_unit, area, area_unit, te,
-        lines, beam_area, type, telescope, author, source) VALUES
+        cont_freq, cont, e_cont, cont_unit, area, area_unit, te, e_te,
+        beam_area, type, telescope, author, source) VALUES
         (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """,
             rows,
